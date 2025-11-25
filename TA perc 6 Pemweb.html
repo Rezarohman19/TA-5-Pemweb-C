@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kalkulator — Collapsible + iOS Layout</title>
+  <style>
+    :root{
+      --bg:#0b0b0b;
+      --card:#0f0f0f;
+      --panel:#111;
+      --btn:#212121;
+      --btn-ghost:#2f2f2f;
+      --accent:#f2a33c;
+      --accent-dark:#cf8a2b;
+      --text:#ffffff;
+      --muted:#bdbdbd;
+      --border-accent:rgba(242,163,60,0.15);
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:black;color:var(--text)}
+
+    .wrap{
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:20px;
+    }
+
+    .calc-container{
+      display:flex;
+      gap:12px;
+      width:100%;
+      max-width:720px;
+    }
+
+    .sidebar{
+      width:220px;
+      min-width:220px;
+      background:#0d0d0d;
+      border:1px solid rgba(255,255,255,0.05);
+      border-radius:12px;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      height:480px;
+    }
+
+    .sidebar h3{
+      margin:0 0 10px 0;
+      font-size:17px;
+    }
+
+    .history-scroll{
+      overflow-y:auto;
+      flex:1;
+      padding-right:4px;
+    }
+
+    .history-item{
+      font-size:13px;
+      background:rgba(255,255,255,0.03);
+      padding:8px;
+      border-radius:8px;
+      margin-bottom:8px;
+      cursor:pointer;
+    }
+
+    .toggle-btn{
+      width:100%;
+      padding:6px 0;
+      text-align:center;
+      cursor:pointer;
+      background:#1a1a1a;
+      border-radius:6px;
+      font-size:14px;
+      margin-bottom:8px;
+    }
+
+    .card{
+      flex:1;
+      background:#0f0f0f;
+      padding:14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.05);
+    }
+
+    .top-display{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+
+    .memory-box{
+      width:110px;
+      background:#111;
+      padding:10px;
+      border-radius:10px;
+      font-size:15px;
+      text-align:center;
+    }
+
+    .display{
+      background:#080808;
+      padding:14px;
+      border-radius:10px;
+      margin-top:12px;
+      margin-bottom:16px;
+    }
+
+    .expr{
+      font-size:14px;
+      color:var(--muted);
+      min-height:18px;
+    }
+
+    .value{
+      font-size:40px;
+      color:var(--accent);
+      font-weight:700;
+      text-align:right;
+    }
+
+    .body{
+      display:grid;
+      grid-template-columns: 1fr 90px;
+      gap:12px;
+    }
+
+    .keypad{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+    }
+
+    .key{
+      height:58px;
+      background:#222;
+      border:none;
+      border-radius:10px;
+      font-size:20px;
+      color:white;
+      cursor:pointer;
+    }
+
+    .wide{ grid-column: span 2; }
+
+    .ops{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .op{
+      height:58px;
+      background:var(--accent);
+      border:none;
+      border-radius:10px;
+      font-size:20px;
+      font-weight:700;
+      cursor:pointer;
+      color:black;
+    }
+
+    .equal{
+      height:68px;
+      background:linear-gradient(180deg,var(--accent),var(--accent-dark));
+    }
+
+    @media(max-width:700px){
+      .calc-container{ flex-direction:column; }
+      .sidebar{ width:100%; min-height:auto; order:2; }
+      .card{ order:1; }
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="calc-container">
+
+    <div class="sidebar" id="historyPanel">
+
+      <div class="toggle-btn" onclick="toggleHistory()">
+         History
+      </div>
+
+      <h3>History (maks 5)</h3>
+
+      <div class="history-scroll" id="historyList">
+        <div style="color:gray">Belum ada history</div>
+      </div>
+    </div>
+
+    <div class="card">
+
+      <div class="top-display">
+        <div></div>
+
+        <div class="memory-box" id="memoryDisplay">0</div>
+      </div>
+
+      <div class="display">
+        <div class="expr" id="expr">&nbsp;</div>
+        <div class="value" id="value">0</div>
+      </div>
+
+      <div class="body">
+        <div class="keypad" id="pad">
+
+          <button class="key" data-action="mem-clear">MC</button>
+          <button class="key" data-action="mem-recall">MR</button>
+          <button class="key" data-action="mem-plus">M+</button>
+
+          <button class="key" data-action="mem-minus">M-</button>
+          <button class="key" data-action="clear-all">C</button>
+          <button class="key" data-action="clear-entry">CE</button>
+
+          <button class="key" data-value="7">7</button>
+          <button class="key" data-value="8">8</button>
+          <button class="key" data-value="9">9</button>
+
+          <button class="key" data-value="4">4</button>
+          <button class="key" data-value="5">5</button>
+          <button class="key" data-value="6">6</button>
+
+          <button class="key" data-value="1">1</button>
+          <button class="key" data-value="2">2</button>
+          <button class="key" data-value="3">3</button>
+
+          <button class="key wide" data-action="toggle-sign">±</button>
+          <button class="key" data-value="0">0</button>
+          <button class="key" data-action="decimal">.</button>
+
+          <button class="key wide" data-action="percent">%</button>
+          <button class="key" data-action="delete">⌫</button>
+        </div>
+
+        <div class="ops">
+          <button class="op" data-value="/">÷</button>
+          <button class="op" data-value="*">×</button>
+          <button class="op" data-value="-">−</button>
+          <button class="op" data-value="+">+</button>
+          <button class="op equal" data-action="equals">=</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+const valueEl = document.getElementById('value');
+const exprEl = document.getElementById('expr');
+const historyListEl = document.getElementById('historyList');
+const memoryDisplayEl = document.getElementById('memoryDisplay');
+
+let current = '0';
+let tokens = [];
+let history = [];
+let memory = 0;
+let lastWasResult = false;
+
+function render(){
+  valueEl.textContent = current;
+  exprEl.textContent = tokens.join(" ") || "\u00A0";
+  memoryDisplayEl.textContent = memory;
+
+  historyListEl.innerHTML = "";
+  if(history.length === 0){
+    historyListEl.innerHTML = "<div style='color:gray'>Belum ada history</div>";
+  } else {
+    history.forEach(h=>{
+      const d = document.createElement("div");
+      d.className = "history-item";
+      d.textContent = `${h.expr} = ${h.result}`;
+      d.onclick = ()=>{
+        current = h.result.toString();
+        lastWasResult = true;
+        render();
+      };
+      historyListEl.appendChild(d);
+    });
+  }
+}
+
+function inputDigit(d){
+  if(lastWasResult){ current = d; lastWasResult=false; }
+  else current = current==="0"? d : current+d;
+  render();
+}
+function inputDecimal(){
+  if(!current.includes(".")) current+=".";
+  render();
+}
+
+function toggleSign(){ current = current.startsWith("-")? current.slice(1) : "-"+current; render();}
+function clearAll(){ current="0"; tokens=[]; render();}
+function clearEntry(){ current="0"; render();}
+function deleteChar(){ current = current.length<=1?"0":current.slice(0,-1); render();}
+function percent(){ current = (parseFloat(current)/100).toString(); render();}
+
+function pushOperator(op){
+  tokens.push(current, op);
+  current = "0";
+  lastWasResult = false;
+  render();
+}
+
+function evaluateTokens(arr){
+  const prec = { "+":1, "-":1, "*":2, "/":2 };
+  let out=[], ops=[];
+  const isNum=x=>/^-?\d+(\.\d+)?$/.test(x);
+
+  for(const t of arr){
+    if(isNum(t)) out.push(t);
+    else{
+      while(ops.length && prec[ops.at(-1)]>=prec[t]) out.push(ops.pop());
+      ops.push(t);
+    }
+  }
+
+  while(ops.length) out.push(ops.pop());
+
+  let st=[];
+  for(const t of out){
+    if(isNum(t)) st.push(+t);
+    else{
+      let b=st.pop(), a=st.pop();
+      if(t==="/" && b===0) throw "divzero";
+      st.push(eval(a+t+b));
+    }
+  }
+  return st[0];
+}
+
+function doEquals(){
+  tokens.push(current);
+  try{
+    const result = evaluateTokens(tokens);
+    const rStr = Number(result.toPrecision(12)).toString();
+
+    history.unshift({expr: tokens.join(" "), result:rStr});
+    if(history.length>5) history.pop();
+
+    current = rStr;
+    tokens=[];
+    lastWasResult = true;
+  } catch(e){
+    current = e==="divzero"? "Error: div 0" : "Error";
+    tokens=[];
+  }
+  render();
+}
+
+function memPlus(){ memory+=parseFloat(current)||0; render();}
+function memMinus(){ memory-=parseFloat(current)||0; render();}
+function memRecall(){ current = memory.toString(); render();}
+function memClear(){ memory=0; render(); }
+
+document.getElementById("pad").addEventListener("click", e=>{
+  const b = e.target.closest("button");
+  if(!b) return;
+
+  const v = b.dataset.value;
+  const a = b.dataset.action;
+
+  if(v){
+    if(["+","-","*","/"].includes(v)) pushOperator(v);
+    else inputDigit(v);
+  }
+  else if(a){
+    if(a==="decimal") inputDecimal();
+    if(a==="toggle-sign") toggleSign();
+    if(a==="clear-all") clearAll();
+    if(a==="clear-entry") clearEntry();
+    if(a==="delete") deleteChar();
+    if(a==="percent") percent();
+    if(a==="mem-plus") memPlus();
+    if(a==="mem-minus") memMinus();
+    if(a==="mem-recall") memRecall();
+    if(a==="mem-clear") memClear();
+  }
+});
+
+document.querySelectorAll(".ops .op").forEach(b=>{
+  const v = b.dataset.value;
+  const a = b.dataset.action;
+  b.onclick=()=> v?pushOperator(v):doEquals();
+});
+
+window.onkeydown=e=>{
+  if(e.key>="0" && e.key<="9") inputDigit(e.key);
+  if(e.key===".") inputDecimal();
+  if(e.key==="Enter") doEquals();
+  if(["+","-","*","/"].includes(e.key)) pushOperator(e.key);
+  if(e.key==="Backspace") deleteChar();
+  if(e.key==="Escape") clearAll();
+};
+
+function toggleHistory(){
+  const p = document.getElementById("historyPanel");
+  p.style.display = p.style.display==="none"? "flex":"none";
+}
+
+render();
+</script>
+
+</body>
+</html>
